@@ -1,61 +1,89 @@
-﻿-- Exported from QuickDBD: https://www.quickdatatabasediagrams.com/
--- Link to schema: https://app.quickdatabasediagrams.com/#/schema/yK6l_qEXf06XdF1ibmNUuQ
--- NOTE! If you have used non-SQL datatypes in your design, you will have to change these here.
+DROP TABLE "COMPETITION";
+DROP TABLE "ENTRAINEMENT";
+DROP TABLE "UTILISATEUR";
 
--- ProductID int FK >- p.ProductID
-
--- Table documentation comment 1 (try the PDF/RTF export)
--- Table documentation comment 2
-CREATE TABLE "Utilisateur" (
-    "UserID" int   NOT NULL,
+CREATE TABLE "UTILISATEUR" (
+    "UserID" varchar(200)   NOT NULL,
     "Nom" varchar(200)   NOT NULL,
     "Prenom" varchar(200)   NOT NULL,
     "Age" int   NOT NULL,
     "Categorie" varchar(200)   NOT NULL,
-    "Top_adherent" int   NOT NULL,
-    "Top_coach" int   NOT NULL,
-    "Top_secretaire" int   NOT NULL,
-    "Top_hors_club" int   NOT NULL,
-    CONSTRAINT "pk_Utilisateur" PRIMARY KEY (
+    CONSTRAINT "pk_UTILISATEUR" PRIMARY KEY (
         "UserID"
      )
 );
 
-CREATE TABLE "Competition" (
+CREATE TABLE "COMPETITION" (
     "Date" date   NOT NULL,
     "Lieu" varchar(200)   NOT NULL,
     "Type" varchar(20)   NOT NULL,
     "Categorie" varchar(200)   NOT NULL,
-    "Coureurs" int   NOT NULL,
-    "Gagant" int   NOT NULL
+    "Coureurs" varchar(200)   NOT NULL,
+    "Gagant" varchar(200)   NOT NULL
 );
 
-CREATE TABLE "Entrainement" (
+CREATE TABLE "ENTRAINEMENT" (
     "Date" date   NOT NULL,
     "Lieu" varchar(200)   NOT NULL,
     "Type" varchar(20)   NOT NULL,
-    "Coureurs" int   NOT NULL
+    "Coureurs" varchar(200)   NOT NULL
 );
 
-CREATE TABLE "Club" (
-    "Nom" varchar(200)   NOT NULL,
-    "Adresse" varchar(200)   NOT NULL,
-    "Président" int   NOT NULL,
-    "Coach" int   NOT NULL
-);
 
-ALTER TABLE "Competition" ADD CONSTRAINT "fk_Competition_Coureurs" FOREIGN KEY("Coureurs")
-REFERENCES "p" ("UserID");
+ALTER TABLE "COMPETITION" ADD CONSTRAINT "fk_COMPETITION_Coureurs" FOREIGN KEY("Coureurs")
+REFERENCES "UTILISATEUR" ("UserID");
 
-ALTER TABLE "Competition" ADD CONSTRAINT "fk_Competition_Gagant" FOREIGN KEY("Gagant")
-REFERENCES "p" ("UserID");
+ALTER TABLE "COMPETITION" ADD CONSTRAINT "fk_COMPETITION_Gagant" FOREIGN KEY("Gagant")
+REFERENCES "UTILISATEUR" ("UserID");
 
-ALTER TABLE "Entrainement" ADD CONSTRAINT "fk_Entrainement_Coureurs" FOREIGN KEY("Coureurs")
-REFERENCES "p" ("UserID");
+ALTER TABLE "ENTRAINEMENT" ADD CONSTRAINT "fk_ENTRAINEMENT_Coureurs" FOREIGN KEY("Coureurs")
+REFERENCES "UTILISATEUR" ("UserID");
 
-ALTER TABLE "Club" ADD CONSTRAINT "fk_Club_Président" FOREIGN KEY("Président")
-REFERENCES "p" ("UserID");
+/*ROLE*/
 
-ALTER TABLE "Club" ADD CONSTRAINT "fk_Club_Coach" FOREIGN KEY("Coach")
-REFERENCES "p" ("UserID");
+DROP ROLE ADMIN22_ROLE_ADHERENT;
+DROP ROLE ADMIN22_ROLE_ABSTRAIT;
+DROP ROLE ADMIN22_ROLE_SECRETAIRE;
+DROP ROLE ADMIN22_ROLE_COACH;
 
+CREATE ROLE ADMIN22_ROLE_ADHERENT;
+CREATE ROLE ADMIN22_ROLE_ABSTRAIT;
+CREATE ROLE ADMIN22_ROLE_SECRETAIRE;
+CREATE ROLE ADMIN22_ROLE_COACH;
+
+/*GRANT ROLE ADHERENT*/
+GRANT SELECT, UPDATE ON UTILISATEUR TO ADMIN22_ROLE_ADHERENT;
+GRANT SELECT ON ENTRAINEMENT TO ADMIN22_ROLE_ADHERENT;
+GRANT SELECT ON COMPETITION TO ADMIN22_ROLE_ADHERENT;
+
+/*GRANT ROLE ABSTRAIT*/
+GRANT UPDATE ON ENTRAINEMENT TO ADMIN22_ROLE_ABSTRAIT;
+GRANT UPDATE ON COMPETITION TO ADMIN22_ROLE_ABSTRAIT;
+
+/*GRANT ROLE SECRETAIRE*/
+GRANT DELETE, INSERT ON UTILISATEUR TO ADMIN22_ROLE_SECRETAIRE;
+GRANT DELETE, INSERT ON COMPETITION TO ADMIN22_ROLE_SECRETAIRE;
+
+/*GRANT ROLE COACH*/
+GRANT DELETE, INSERT ON ENTRAINEMENT TO ADMIN22_ROLE_COACH;
+
+
+CREATE OR REPLACE PACKAGE set_emp_ctx_pkg IS
+PROCEDURE set_emp;
+END;
+/
+CREATE OR REPLACE PACKAGE BODY set_emp_ctx_pkg IS
+PROCEDURE set_emp
+IS
+nom_ctx VARCHAR2(20);
+depto_ctx VARCHAR2(20);
+BEGIN
+nom_ctx:=SYS_CONTEXT('USERENV', 'SESSION_USER');
+DBMS_SESSION.SET_CONTEXT('emp_ctx', 'nom', nom_ctx);
+SELECT depto INTO DEPTO_CTX
+FROM scott.employes
+WHERE UPPER(NOM)=nom_ctx;
+DBMS_SESSION.SET_CONTEXT('emp_ctx', 'depto', depto_ctx);
+END set_emp;
+END set_emp_ctx_pkg;
+/
